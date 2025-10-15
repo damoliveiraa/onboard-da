@@ -1,3 +1,10 @@
+import potionHealing from "@/assets/potion-healing.jpg";
+import swordVorpal from "@/assets/sword-vorpal.jpg";
+import amuletWisdom from "@/assets/amulet-wisdom.jpg";
+import shieldDeflection from "@/assets/shield-deflection.jpg";
+import bootsSpeed from "@/assets/boots-speed.jpg";
+import ringInvisibility from "@/assets/ring-invisibility.jpg";
+
 export interface Product {
   item_id: string;
   item_name: string;
@@ -16,7 +23,7 @@ export const PRODUCTS: Product[] = [
     price: 50,
     currency: "GP",
     item_category: "Poções",
-    image: "/src/assets/potion-healing.jpg",
+    image: potionHealing,
     description: "Uma poção mágica que restaura 2d4+2 pontos de vida. Seu brilho vermelho pulsante emana energia vital."
   },
   {
@@ -25,7 +32,7 @@ export const PRODUCTS: Product[] = [
     price: 1200,
     currency: "GP",
     item_category: "Armas",
-    image: "/src/assets/sword-vorpal.jpg",
+    image: swordVorpal,
     description: "Lâmina lendária com poder de decapitação. Seu fio arcano brilha com energia púrpura mortal."
   },
   {
@@ -34,7 +41,7 @@ export const PRODUCTS: Product[] = [
     price: 350,
     currency: "GP",
     item_category: "Amuletos",
-    image: "/src/assets/amulet-wisdom.jpg",
+    image: amuletWisdom,
     description: "Forjado pelos antigos reis das montanhas. Concede +2 em Sabedoria e resistência a encantamentos."
   },
   {
@@ -43,7 +50,7 @@ export const PRODUCTS: Product[] = [
     price: 275,
     currency: "GP",
     item_category: "Armaduras",
-    image: "/src/assets/shield-deflection.jpg",
+    image: shieldDeflection,
     description: "Runas ancestrais desviam projéteis mágicos. +2 CA contra ataques à distância."
   },
   {
@@ -52,7 +59,7 @@ export const PRODUCTS: Product[] = [
     price: 400,
     currency: "GP",
     item_category: "Itens Mágicos",
-    image: "/src/assets/boots-speed.jpg",
+    image: bootsSpeed,
     description: "Permite movimento dobrado por 10 minutos. Trilhas de vento arcano seguem cada passo."
   },
   {
@@ -61,7 +68,7 @@ export const PRODUCTS: Product[] = [
     price: 2500,
     currency: "GP",
     item_category: "Anéis",
-    image: "/src/assets/ring-invisibility.jpg",
+    image: ringInvisibility,
     description: "Artefato raro que concede invisibilidade completa. Use com sabedoria, pois grandes poderes atraem grandes perigos."
   }
 ];
