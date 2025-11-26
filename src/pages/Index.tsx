@@ -310,13 +310,33 @@ const Index = () => {
                     disabled={treasureTimer !== null}
                     onClick={() => {
                       if (chestItems[chestId]) return;
-                      const items = [
+                      
+                      const regularItems = [
                         "Elmo de Bronze", "Poção de Vida", "Pergaminho Antigo", "Moedas de Ouro",
                         "Espada Flamejante", "Escudo de Mithril", "Anel Mágico", "Capa da Invisibilidade",
                         "Botas Aladas", "Amuleto de Proteção", "Cristal de Mana", "Grimório Ancestral",
                         "Elixir Raro", "Gema Encantada", "Chave Dourada", "Mapa do Tesouro"
                       ];
-                      const randomItem = items[Math.floor(Math.random() * items.length)];
+                      
+                      const kingItems = [
+                        "Bússula do Rei", "King's Sword", "Coroa do Rei Louco", "Cálice do Rei",
+                        "King's Shield", "Manto do Rei", "Cetro do Rei", "King's Ring"
+                      ];
+
+                      const currentItems = Object.values(chestItems);
+                      const hasKingItem = currentItems.some(item => 
+                        item.includes('Rei') || item.includes('King')
+                      );
+                      const isLastChest = currentItems.length === 3;
+
+                      let pool = [...regularItems, ...kingItems];
+                      
+                      // If this is the last chest and we haven't found a king item yet, force one
+                      if (isLastChest && !hasKingItem) {
+                        pool = kingItems;
+                      }
+
+                      const randomItem = pool[Math.floor(Math.random() * pool.length)];
                       const newChestItems = {...chestItems, [chestId]: randomItem};
                       setChestItems(newChestItems);
                       toast.success(`Você encontrou: ${randomItem}!`);
@@ -329,8 +349,8 @@ const Index = () => {
                       
                       // Check if all chests are opened
                       if (Object.keys(newChestItems).length === 4) {
-                        setTreasureTimer(120); // 2 minutes
-                        toast.info("Todos os baús foram abertos! Aguarde 2 minutos para novos tesouros.");
+                        setTreasureTimer(60); // 1 minute
+                        toast.info("Todos os baús foram abertos! Aguarde 1 minuto para novos tesouros.");
                       }
                     }}
                   >
