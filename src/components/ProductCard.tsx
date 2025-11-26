@@ -1,16 +1,15 @@
 import { Button } from "./ui/button";
 import { Product } from "@/types/products";
 import "@/types/datalayer";
+import { Link } from "react-router-dom";
 
 interface ProductCardProps {
   product: Product;
   onAddToCart: (product: Product) => void;
-  onViewDetails: (product: Product) => void;
 }
 
-export const ProductCard = ({ product, onAddToCart, onViewDetails }: ProductCardProps) => {
+export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
   const handleClick = () => {
-    // Push select_item event
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
       event: 'select_item',
@@ -23,13 +22,12 @@ export const ProductCard = ({ product, onAddToCart, onViewDetails }: ProductCard
         }]
       }
     });
-    onViewDetails(product);
   };
 
   const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     
-    // Push add_to_cart event
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
       event: 'add_to_cart',
@@ -50,9 +48,10 @@ export const ProductCard = ({ product, onAddToCart, onViewDetails }: ProductCard
   };
 
   return (
-    <div 
+    <Link
+      to={`/product/${product.item_id}`}
       onClick={handleClick}
-      className="bg-card border border-border rounded-lg overflow-hidden hover:border-primary/50 transition-all duration-300 hover:shadow-arcane cursor-pointer group"
+      className="bg-card border border-border rounded-lg overflow-hidden hover:border-primary/50 transition-all duration-300 hover:shadow-arcane cursor-pointer group block"
     >
       <div className="aspect-square overflow-hidden bg-background/50">
         <img 
@@ -71,6 +70,6 @@ export const ProductCard = ({ product, onAddToCart, onViewDetails }: ProductCard
           </Button>
         </div>
       </div>
-    </div>
+    </Link>
   );
 };

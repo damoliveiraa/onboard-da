@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { X, ShoppingCart } from "lucide-react";
 import { Button } from "./ui/button";
 import { Product } from "@/types/products";
@@ -11,9 +13,10 @@ interface CartProps {
 }
 
 export const Cart = ({ items, onRemove, onCheckout, onClose }: CartProps) => {
+  const navigate = useNavigate();
   const total = items.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0);
 
-  const handleCheckout = () => {
+  useEffect(() => {
     // Push view_cart event
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
@@ -30,8 +33,11 @@ export const Cart = ({ items, onRemove, onCheckout, onClose }: CartProps) => {
         }))
       }
     });
-    
+  }, [items, total]);
+
+  const handleCheckout = () => {
     onCheckout();
+    navigate("/checkout");
   };
 
   return (

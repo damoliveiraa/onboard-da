@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
-import { ShoppingCart, Sword, Axe, Crosshair } from "lucide-react";
+import { ShoppingCart, Sword, Axe, Crosshair, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProductCard } from "@/components/ProductCard";
 import { Cart } from "@/components/Cart";
-import { PRODUCTS, Product } from "@/types/products";
+import { GTMSettings } from "@/components/GTMSettings";
+import { LoginModal } from "@/components/LoginModal";
+import { Product } from "@/types/products";
+import productsData from "@/data/products.json";
 import { toast } from "sonner";
+import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
 import "@/types/datalayer";
 
-import citadelHero from "@/assets/citadel-hero.jpg";
-import whisperingGate from "@/assets/whispering-gate.jpg";
-import goblinImg from "@/assets/goblin.jpg";
-import redDragon from "@/assets/red-dragon.jpg";
+
 
 const Index = () => {
   const [gateMessage, setGateMessage] = useState("");
@@ -19,40 +21,79 @@ const Index = () => {
   const [dragonResult, setDragonResult] = useState("");
   const [dragonCep, setDragonCep] = useState("");
   const [bridgeFixed, setBridgeFixed] = useState(false);
+  const [chestItems, setChestItems] = useState<{[key: number]: string}>({});
+  const [showDamage, setShowDamage] = useState(false);
+  const [damageAmount, setDamageAmount] = useState(0);
+  const [treasureTimer, setTreasureTimer] = useState<number | null>(null);
+  const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null);
   
-  const [cart, setCart] = useState<Product[]>([]);
+  const { cart, addToCart, removeFromCart } = useCart();
+  const { user, logout } = useAuth();
   const [showCart, setShowCart] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [checkoutStep, setCheckoutStep] = useState(0);
-  
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    cep: "",
-    address: "",
-    guild: "",
-    cardNumber: "",
-  });
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   useEffect(() => {
-    // Push view_item_list on mount
+    // Push virtualPageView on mount
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
-      event: 'view_item_list',
-      ecommerce: {
-        items: PRODUCTS.map(p => ({
-          item_id: p.item_id,
-          item_name: p.item_name,
-          price: p.price,
-          item_category: p.item_category,
-        }))
-      }
+      event: 'virtualPageView',
+      page_title: 'Home - O Arsenal do Aventureiro',
+      page_path: '/'
     });
+    
+    // Intersection Observer for view_item_list
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          window.dataLayer.push({
+            event: 'view_item_list',
+            ecommerce: {
+              items: productsData.map(p => ({
+                item_id: p.item_id,
+                item_name: p.item_name,
+                price: p.price,
+                item_category: p.item_category,
+              }))
+            }
+          });
+          observer.disconnect(); // Only fire once
+        }
+      });
+    }, { threshold: 0.5 });
+
+    const productSection = document.getElementById('product-list-section');
+    if (productSection) {
+      observer.observe(productSection);
+    }
+
+    return () => observer.disconnect();
   }, []);
+
+  // Treasure timer effect
+  useEffect(() => {
+    if (treasureTimer !== null && treasureTimer > 0) {
+      const interval = setInterval(() => {
+        setTreasureTimer(prev => {
+          if (prev === null || prev <= 1) {
+            clearInterval(interval);
+            setChestItems({});
+            toast.success("Os baús foram reabastecidos!");
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      setTimerInterval(interval);
+      return () => clearInterval(interval);
+    }
+  }, [treasureTimer]);
 
   const handleGateClick = () => {
     setGateMessage("O portão se abre rangendo. A jornada começou!");
-    window.dataLayer.push({ event: 'hero_journey_start' });
+    window.dataLayer.push({ 
+      event: 'level_start',
+      level_name: 'Introduction'
+    });
     toast.success("A aventura começa!");
   };
 
@@ -60,14 +101,16 @@ const Index = () => {
     const damage = Math.floor(Math.random() * 21);
     setGoblinDamage(damage);
     window.dataLayer.push({ 
-      event: 'goblin_attack', 
+      event: 'select_content',
+      content_type: 'monster',
+      item_id: 'goblin',
       damage_dealt: damage 
     });
     toast.info(`Você causou ${damage} de dano no goblin!`);
   };
 
   const scanTreasures = () => {
-    const kingItems = PRODUCTS.filter(p => 
+    const kingItems = productsData.filter(p => 
       p.item_name.toLowerCase().includes('king') || 
       p.item_name.toLowerCase().includes('rei')
     );
@@ -80,9 +123,10 @@ const Index = () => {
     if (!dragonCep || isNaN(cepNum)) {
       setDragonResult("O feitiço falhou! Insira um CEP válido.");
       window.dataLayer.push({ 
-        event: 'dragon_battle_attempt', 
-        power_level: dragonCep, 
-        outcome: 'failure' 
+        event: 'level_end',
+        level_name: 'Dragon Battle',
+        success: false,
+        power_level: dragonCep
       });
       toast.error("Feitiço falhou!");
       return;
@@ -91,17 +135,19 @@ const Index = () => {
     if (cepNum % 2 === 0) {
       setDragonResult("✨ SUCESSO! O dragão foi banido! A magia ressoou em harmonia!");
       window.dataLayer.push({ 
-        event: 'dragon_battle_attempt', 
-        power_level: dragonCep, 
-        outcome: 'success' 
+        event: 'level_end',
+        level_name: 'Dragon Battle',
+        success: true,
+        power_level: dragonCep
       });
       toast.success("Dragão banido com sucesso!");
     } else {
       setDragonResult("💀 FALHA! O dragão resistiu ao feitiço! Tente um número par.");
       window.dataLayer.push({ 
-        event: 'dragon_battle_attempt', 
-        power_level: dragonCep, 
-        outcome: 'failure' 
+        event: 'level_end',
+        level_name: 'Dragon Battle',
+        success: false,
+        power_level: dragonCep
       });
       toast.error("O dragão resistiu!");
     }
@@ -112,88 +158,13 @@ const Index = () => {
     toast.success("Ponte reparada com sucesso!");
   };
 
-  const addToCart = (product: Product) => {
-    setCart(prev => {
-      const existing = prev.find(p => p.item_id === product.item_id);
-      if (existing) {
-        return prev.map(p => 
-          p.item_id === product.item_id 
-            ? { ...p, quantity: (p.quantity || 1) + 1 }
-            : p
-        );
-      }
-      return [...prev, { ...product, quantity: 1 }];
-    });
-    toast.success(`${product.item_name} adicionado ao inventário!`);
+  const formatCEP = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 5) return numbers;
+    return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`;
   };
 
-  const removeFromCart = (itemId: string) => {
-    setCart(prev => prev.filter(p => p.item_id !== itemId));
-    toast.info("Item removido do inventário");
-  };
 
-  const handleViewDetails = (product: Product) => {
-    setSelectedProduct(product);
-    window.dataLayer.push({
-      event: 'view_item',
-      ecommerce: {
-        items: [{
-          item_id: product.item_id,
-          item_name: product.item_name,
-          price: product.price,
-          item_category: product.item_category,
-        }]
-      }
-    });
-  };
-
-  const handleBeginCheckout = () => {
-    const total = cart.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0);
-    
-    window.dataLayer.push({
-      event: 'begin_checkout',
-      ecommerce: {
-        currency: 'GP',
-        value: total,
-        items: cart.map(item => ({
-          item_id: item.item_id,
-          item_name: item.item_name,
-          price: item.price,
-          item_category: item.item_category,
-          quantity: item.quantity || 1,
-        }))
-      }
-    });
-    
-    setCheckoutStep(1);
-    setShowCart(false);
-  };
-
-  const handlePurchase = () => {
-    const total = cart.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0);
-    const transactionId = 'T' + new Date().getTime();
-    
-    window.dataLayer.push({
-      event: 'purchase',
-      ecommerce: {
-        transaction_id: transactionId,
-        value: total,
-        tax: 0,
-        shipping: 0,
-        currency: 'GP',
-        items: cart.map(item => ({
-          item_id: item.item_id,
-          item_name: item.item_name,
-          price: item.price,
-          item_category: item.item_category,
-          quantity: item.quantity || 1,
-        }))
-      }
-    });
-    
-    setCheckoutStep(4);
-    toast.success("Compra realizada com sucesso!");
-  };
 
   return (
     <div className="min-h-screen">
@@ -201,25 +172,53 @@ const Index = () => {
       <header className="fixed top-0 left-0 right-0 bg-card/80 backdrop-blur-md border-b border-primary/30 z-40">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl md:text-3xl font-display text-glow-arcane">O Arsenal do Aventureiro</h1>
-          <button 
-            onClick={() => setShowCart(true)}
-            className="relative p-3 hover:bg-primary/10 rounded-full transition-colors"
-          >
-            <ShoppingCart className="w-6 h-6 text-gold" />
-            {cart.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-dragon text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
-                {cart.reduce((sum, item) => sum + (item.quantity || 1), 0)}
-              </span>
+          <div className="flex items-center gap-2">
+            <GTMSettings />
+            {user ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground hidden md:inline">{user.name}</span>
+                <button 
+                  onClick={logout}
+                  className="p-3 hover:bg-destructive/10 rounded-full transition-colors"
+                  title="Sair"
+                >
+                  <LogOut className="w-5 h-5 text-destructive" />
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={() => setShowLoginModal(true)}
+                className="p-3 hover:bg-primary/10 rounded-full transition-colors"
+                title="Entrar"
+              >
+                <User className="w-5 h-5 text-primary" />
+              </button>
             )}
-          </button>
+            <button 
+              onClick={() => setShowCart(true)}
+              className="relative p-3 hover:bg-primary/10 rounded-full transition-colors"
+            >
+              <ShoppingCart className="w-6 h-6 text-gold" />
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-dragon text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                  {cart.reduce((sum, item) => sum + (item.quantity || 1), 0)}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </header>
 
       <div className="pt-20">
         {/* Hero Section - Cidadela */}
-        <section className="relative h-[70vh] md:h-screen flex items-center justify-center overflow-hidden">
+        <section 
+          className="relative h-[70vh] md:h-screen flex items-center justify-center overflow-hidden"
+          data-promo-id="hero_citadel"
+          data-promo-name="Cidadela do Eco Fragmentado"
+          data-promo-position="hero"
+        >
           <div className="absolute inset-0">
-            <img src={citadelHero} alt="Cidadela do Eco Fragmentado" className="w-full h-full object-cover" />
+            <img src="/assets/citadel-hero.jpg" alt="Cidadela do Eco Fragmentado" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/30 to-background" />
           </div>
           <div className="relative z-10 text-center px-4 max-w-4xl">
@@ -240,10 +239,15 @@ const Index = () => {
             </h2>
 
             {/* Atividade 1.1 - Portão Sussurrante */}
-            <div className="mb-20 bg-card/50 border-2 border-primary/30 rounded-lg p-8 shadow-arcane">
+            <div 
+              className="mb-20 bg-card/50 border-2 border-primary/30 rounded-lg p-8 shadow-arcane"
+              data-promo-id="challenge_gate"
+              data-promo-name="O Portão Sussurrante"
+              data-promo-position="challenge_1"
+            >
               <h3 className="text-2xl md:text-3xl font-display mb-6 text-primary">O Portão Sussurrante</h3>
               <div className="grid md:grid-cols-2 gap-8 items-center">
-                <img src={whisperingGate} alt="Portão Sussurrante" className="w-full rounded-lg shadow-deep" />
+                <img src="/assets/whispering-gate.jpg" alt="Portão Sussurrante" className="w-full rounded-lg shadow-deep" />
                 <div>
                   <Button variant="hero" size="xl" onClick={handleGateClick} className="w-full mb-4">
                     Entre
@@ -256,11 +260,16 @@ const Index = () => {
             </div>
 
             {/* Atividade 1.2 - Emboscada Goblin */}
-            <div className="mb-20 bg-card/50 border-2 border-destructive/30 rounded-lg p-8 shadow-deep">
+            <div 
+              className="mb-20 bg-card/50 border-2 border-destructive/30 rounded-lg p-8 shadow-deep"
+              data-promo-id="challenge_goblin"
+              data-promo-name="Emboscada Goblin"
+              data-promo-position="challenge_2"
+            >
               <h3 className="text-2xl md:text-3xl font-display mb-6 text-destructive">Emboscada Goblin</h3>
               <div className="grid md:grid-cols-2 gap-8 items-center">
                 <img 
-                  src={goblinImg} 
+                  src="/assets/goblin.jpg" 
                   alt="Goblin" 
                   className="w-full rounded-lg shadow-deep cursor-pointer hover:scale-105 transition-transform"
                   onClick={handleGoblinClick}
@@ -275,25 +284,81 @@ const Index = () => {
             </div>
 
             {/* Atividade 1.3 - Sala do Tesouro */}
-            <div className="mb-20 bg-card/50 border-2 border-gold/30 rounded-lg p-8 shadow-gold">
+            <div 
+              className="mb-20 bg-card/50 border-2 border-gold/30 rounded-lg p-8 shadow-gold"
+              data-promo-id="challenge_treasure"
+              data-promo-name="Sala do Tesouro"
+              data-promo-position="challenge_3"
+            >
               <h3 className="text-2xl md:text-3xl font-display mb-6 text-gold text-glow-gold">Sala do Tesouro</h3>
+              <p className="text-center mb-6 text-muted-foreground">Clique nos baús para revelar tesouros antigos!</p>
+              
+              {treasureTimer !== null && (
+                <div className="mb-6 text-center">
+                  <p className="text-lg font-display text-gold mb-2">Próximos tesouros em:</p>
+                  <p className="text-4xl font-bold text-glow-gold">
+                    {Math.floor(treasureTimer / 60)}:{(treasureTimer % 60).toString().padStart(2, '0')}
+                  </p>
+                </div>
+              )}
+              
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                {["Elmo de Bronze", "Manopla do Poder Ocular do Rei Thror", "Adaga Enferrujada", 
-                  "Botas do King's Guard", "Poção Menor", "Pergaminho do Blacking", "Escudo Antigo", "Anel Simples"].map((item, i) => (
-                  <div key={i} className="bg-background/80 border border-border rounded p-4 text-center hover:border-gold/50 transition-colors">
-                    <p className="text-sm md:text-base text-foreground">{item}</p>
-                  </div>
+                {[1, 2, 3, 4].map((chestId) => (
+                  <button 
+                    key={chestId}
+                    className="group relative h-32 bg-background/80 border-2 border-gold/50 rounded-lg p-4 flex flex-col items-center justify-center hover:border-gold hover:bg-gold/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={treasureTimer !== null}
+                    onClick={() => {
+                      if (chestItems[chestId]) return;
+                      const items = [
+                        "Elmo de Bronze", "Poção de Vida", "Pergaminho Antigo", "Moedas de Ouro",
+                        "Espada Flamejante", "Escudo de Mithril", "Anel Mágico", "Capa da Invisibilidade",
+                        "Botas Aladas", "Amuleto de Proteção", "Cristal de Mana", "Grimório Ancestral",
+                        "Elixir Raro", "Gema Encantada", "Chave Dourada", "Mapa do Tesouro"
+                      ];
+                      const randomItem = items[Math.floor(Math.random() * items.length)];
+                      const newChestItems = {...chestItems, [chestId]: randomItem};
+                      setChestItems(newChestItems);
+                      toast.success(`Você encontrou: ${randomItem}!`);
+                      window.dataLayer.push({
+                        event: 'select_content',
+                        content_type: 'treasure_chest',
+                        item_id: `chest_${chestId}`,
+                        item_name: randomItem
+                      });
+                      
+                      // Check if all chests are opened
+                      if (Object.keys(newChestItems).length === 4) {
+                        setTreasureTimer(120); // 2 minutes
+                        toast.info("Todos os baús foram abertos! Aguarde 2 minutos para novos tesouros.");
+                      }
+                    }}
+                  >
+                    {chestItems[chestId] ? (
+                      <div className="text-center animate-in fade-in zoom-in duration-500">
+                        <div className="text-3xl mb-1">✨</div>
+                        <span className="text-xs font-bold text-gold">{chestItems[chestId]}</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-4xl mb-2 group-hover:scale-110 transition-transform">🎁</div>
+                        <span className="text-sm font-bold text-gold">Baú {chestId}</span>
+                      </>
+                    )}
+                  </button>
                 ))}
               </div>
-              <Button variant="gold" size="lg" onClick={scanTreasures} className="w-full">
-                Escanear Tesouros Reais
-              </Button>
             </div>
 
             {/* Atividade 1.4 - Ira do Dragão */}
-            <div className="bg-card/50 border-2 border-dragon/30 rounded-lg p-8 shadow-deep overflow-hidden relative">
+            <div 
+              className="bg-card/50 border-2 border-dragon/30 rounded-lg p-8 shadow-deep overflow-hidden relative"
+              data-promo-id="challenge_dragon"
+              data-promo-name="Ira do Dragão"
+              data-promo-position="challenge_4"
+            >
               <div className="absolute inset-0 opacity-20">
-                <img src={redDragon} alt="Dragão" className="w-full h-full object-cover" />
+                <img src="/assets/red-dragon.jpg" alt="Dragão" className="w-full h-full object-cover" />
               </div>
               <div className="relative z-10">
                 <h3 className="text-2xl md:text-3xl font-display mb-6 text-dragon">Ira do Dragão</h3>
@@ -303,7 +368,8 @@ const Index = () => {
                     type="text"
                     placeholder="Insira o poder numérico (CEP)"
                     value={dragonCep}
-                    onChange={(e) => setDragonCep(e.target.value)}
+                    onChange={(e) => setDragonCep(formatCEP(e.target.value))}
+                    maxLength={9}
                     className="mb-4"
                   />
                   <Button variant="arcane" size="lg" onClick={handleDragonSpell} className="w-full mb-4">
@@ -328,7 +394,12 @@ const Index = () => {
             </h2>
 
             {/* Atividade 2.1 - Ponte Quebrada */}
-            <div className="mb-12 bg-card/50 border-2 border-primary/30 rounded-lg p-8">
+            <div 
+              className="mb-12 bg-card/50 border-2 border-primary/30 rounded-lg p-8"
+              data-promo-id="forge_bridge"
+              data-promo-name="Ponte Quebrada"
+              data-promo-position="forge_1"
+            >
               <h3 className="text-2xl font-display mb-4">Ponte Quebrada</h3>
               <div className="flex flex-col md:flex-row items-center gap-6">
                 <p 
@@ -344,29 +415,112 @@ const Index = () => {
             </div>
 
             {/* Atividade 2.2 - Arsenal de Gatilhos */}
-            <div className="bg-card/50 border-2 border-gold/30 rounded-lg p-8">
-              <h3 className="text-2xl font-display mb-6 text-gold">Arsenal de Gatilhos</h3>
-              <p className="text-muted-foreground mb-6">Clique nas armas para testar os gatilhos do GTM:</p>
-              <div className="flex flex-wrap justify-center gap-8">
-                <button className="flex flex-col items-center gap-2 p-6 bg-background/80 rounded-lg hover:bg-background border border-border hover:border-primary/50 transition-all">
-                  <Sword className="w-16 h-16 text-primary" />
-                  <span className="font-display">Espada</span>
-                </button>
-                <button className="flex flex-col items-center gap-2 p-6 bg-background/80 rounded-lg hover:bg-background border border-border hover:border-primary/50 transition-all">
-                  <Axe className="w-16 h-16 text-primary" />
-                  <span className="font-display">Machado</span>
-                </button>
-                <button className="flex flex-col items-center gap-2 p-6 bg-background/80 rounded-lg hover:bg-background border border-border hover:border-primary/50 transition-all">
-                  <Crosshair className="w-16 h-16 text-primary" />
-                  <span className="font-display">Arco</span>
-                </button>
+            <div 
+              className="bg-card/50 border-2 border-gold/30 rounded-lg p-8"
+              data-promo-id="forge_arsenal"
+              data-promo-name="Arsenal de Gatilhos"
+              data-promo-position="forge_2"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="text-2xl font-display text-gold">Arsenal de Gatilhos</h3>
+                <div className="group relative">
+                  <div className="w-5 h-5 rounded-full bg-primary/20 border border-primary flex items-center justify-center text-xs font-bold text-primary cursor-help">
+                    i
+                  </div>
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-card border-2 border-primary rounded-lg shadow-arcane opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                    <p className="text-xs text-center text-muted-foreground">
+                      💡 Aventureiro! Use este local para treinar triggers customizados do GTM
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <p className="text-muted-foreground mb-6">Escolha sua arma para treinar:</p>
+              
+              <div className="grid md:grid-cols-2 gap-8 items-center">
+                <div className="grid grid-cols-3 gap-4">
+                  <button 
+                    className="flex flex-col items-center gap-2 p-6 bg-background/80 rounded-lg hover:bg-primary/10 border border-border hover:border-primary transition-all active:scale-95 h-32"
+                    data-name="Espada"
+                    data-id="weapon_sword"
+                    onClick={() => {
+                      const damage = Math.floor(Math.random() * 20) + 10;
+                      setDamageAmount(damage);
+                      setShowDamage(true);
+                      setTimeout(() => setShowDamage(false), 1000);
+                      toast("⚔️ Slash!", { description: `Você causou ${damage} de dano com a Espada!` });
+                      const dummy = document.getElementById('training-dummy');
+                      if(dummy) {
+                        dummy.classList.add('animate-shake');
+                        setTimeout(() => dummy.classList.remove('animate-shake'), 500);
+                      }
+                    }}
+                  >
+                    <Sword className="w-12 h-12 text-primary" />
+                    <span className="font-display text-sm">Espada</span>
+                  </button>
+                  <button 
+                    className="flex flex-col items-center gap-2 p-6 bg-background/80 rounded-lg hover:bg-destructive/10 border border-border hover:border-destructive transition-all active:scale-95 h-32"
+                    data-name="Machado"
+                    data-id="weapon_axe"
+                    onClick={() => {
+                      const damage = Math.floor(Math.random() * 30) + 15;
+                      setDamageAmount(damage);
+                      setShowDamage(true);
+                      setTimeout(() => setShowDamage(false), 1000);
+                      toast("🪓 Chop!", { description: `Você causou ${damage} de dano com o Machado!` });
+                      const dummy = document.getElementById('training-dummy');
+                      if(dummy) {
+                        dummy.classList.add('animate-shake');
+                        setTimeout(() => dummy.classList.remove('animate-shake'), 500);
+                      }
+                    }}
+                  >
+                    <Axe className="w-12 h-12 text-destructive" />
+                    <span className="font-display text-sm">Machado</span>
+                  </button>
+                  <button 
+                    className="flex flex-col items-center gap-2 p-6 bg-background/80 rounded-lg hover:bg-success/10 border border-border hover:border-success transition-all active:scale-95 h-32"
+                    data-name="Arco"
+                    data-id="weapon_bow"
+                    onClick={() => {
+                      const damage = Math.floor(Math.random() * 15) + 8;
+                      setDamageAmount(damage);
+                      setShowDamage(true);
+                      setTimeout(() => setShowDamage(false), 1000);
+                      toast("🏹 Swoosh!", { description: `Você causou ${damage} de dano com o Arco!` });
+                      const dummy = document.getElementById('training-dummy');
+                      if(dummy) {
+                        dummy.classList.add('animate-shake');
+                        setTimeout(() => dummy.classList.remove('animate-shake'), 500);
+                      }
+                    }}
+                  >
+                    <Crosshair className="w-12 h-12 text-success" />
+                    <span className="font-display text-sm">Arco</span>
+                  </button>
+                </div>
+                <div className="flex justify-center relative">
+                  {/* Training Dummy - Simple Silhouette */}
+                  <div id="training-dummy" className="relative w-48 h-56 transition-transform">
+                    {/* Dummy Body - Simple rectangular shape */}
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-40 bg-gradient-to-b from-muted/60 to-muted/40 border-4 border-muted-foreground/50 rounded-lg flex items-center justify-center">
+                    </div>
+                    {/* Dummy Head */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-16 bg-muted/50 border-4 border-muted-foreground/50 rounded-full"></div>
+                  </div>
+                  {showDamage && (
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 text-4xl font-bold text-destructive animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-none">
+                      -{damageAmount}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </section>
 
         {/* Seção 3: Loja */}
-        <section className="py-20 px-4 bg-gradient-dark">
+        <section id="product-list-section" className="py-20 px-4 bg-gradient-dark">
           <div className="container mx-auto max-w-7xl">
             <h2 className="text-4xl md:text-5xl font-display text-center mb-4 text-glow-gold">
               Produtos para o Aventureiro Sábio
@@ -376,92 +530,16 @@ const Index = () => {
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {PRODUCTS.map(product => (
+              {productsData.map(product => (
                 <ProductCard
                   key={product.item_id}
-                  product={product}
+                  product={product as Product}
                   onAddToCart={addToCart}
-                  onViewDetails={handleViewDetails}
                 />
               ))}
             </div>
           </div>
         </section>
-
-        {/* Checkout */}
-        {checkoutStep > 0 && checkoutStep < 4 && (
-          <section className="py-20 px-4 bg-background">
-            <div className="container mx-auto max-w-2xl">
-              <div className="bg-card border-2 border-primary/30 rounded-lg p-8 shadow-arcane">
-                <h2 className="text-3xl font-display mb-8 text-center text-glow-arcane">
-                  Checkout - Etapa {checkoutStep} de 3
-                </h2>
-
-                {checkoutStep === 1 && (
-                  <div className="space-y-4">
-                    <h3 className="text-xl font-display mb-4">Informações do Aventureiro</h3>
-                    <Input placeholder="Nome" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-                    <Input placeholder="Email" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
-                    <Input placeholder="CEP" value={formData.cep} onChange={e => setFormData({...formData, cep: e.target.value})} />
-                    <Button variant="arcane" size="lg" className="w-full" onClick={() => setCheckoutStep(2)}>
-                      Próxima Etapa
-                    </Button>
-                  </div>
-                )}
-
-                {checkoutStep === 2 && (
-                  <div className="space-y-4">
-                    <h3 className="text-xl font-display mb-4">Informações de Entrega</h3>
-                    <Input placeholder="Endereço" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
-                    <Input placeholder="Guilda" value={formData.guild} onChange={e => setFormData({...formData, guild: e.target.value})} />
-                    <div className="flex gap-4">
-                      <Button variant="outline" onClick={() => setCheckoutStep(1)}>Voltar</Button>
-                      <Button variant="arcane" size="lg" className="flex-1" onClick={() => setCheckoutStep(3)}>
-                        Próxima Etapa
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {checkoutStep === 3 && (
-                  <div className="space-y-4">
-                    <h3 className="text-xl font-display mb-4">Pagamento</h3>
-                    <Input placeholder="Cartão de Crédito Arcano" value={formData.cardNumber} onChange={e => setFormData({...formData, cardNumber: e.target.value})} />
-                    <div className="flex gap-4">
-                      <Button variant="outline" onClick={() => setCheckoutStep(2)}>Voltar</Button>
-                      <Button variant="gold" size="lg" className="flex-1" onClick={handlePurchase}>
-                        Finalizar Compra
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Confirmação */}
-        {checkoutStep === 4 && (
-          <section className="py-20 px-4 bg-gradient-dark">
-            <div className="container mx-auto max-w-2xl text-center">
-              <div className="bg-card border-2 border-success/50 rounded-lg p-12 shadow-gold">
-                <h2 className="text-4xl font-display mb-6 text-success text-glow-gold">
-                  🎉 Missão Cumprida!
-                </h2>
-                <p className="text-xl mb-8">Seu pedido foi forjado com sucesso!</p>
-                <p className="text-muted-foreground mb-8">
-                  ID da Transação: <span className="font-mono text-gold">T{Date.now()}</span>
-                </p>
-                <Button variant="arcane" onClick={() => {
-                  setCheckoutStep(0);
-                  setCart([]);
-                }}>
-                  Voltar à Loja
-                </Button>
-              </div>
-            </div>
-          </section>
-        )}
 
         {/* Footer */}
         <footer className="py-12 px-4 bg-background/50 border-t border-primary/20">
@@ -478,35 +556,12 @@ const Index = () => {
         <Cart
           items={cart}
           onRemove={removeFromCart}
-          onCheckout={handleBeginCheckout}
+          onCheckout={() => setShowCart(false)}
           onClose={() => setShowCart(false)}
         />
       )}
 
-      {selectedProduct && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedProduct(null)}>
-          <div className="bg-card border-2 border-primary/30 rounded-lg p-8 max-w-2xl w-full shadow-arcane" onClick={e => e.stopPropagation()}>
-            <div className="grid md:grid-cols-2 gap-8">
-              <img src={selectedProduct.image} alt={selectedProduct.item_name} className="w-full rounded-lg shadow-deep" />
-              <div>
-                <h2 className="text-3xl font-display mb-4 text-glow-arcane">{selectedProduct.item_name}</h2>
-                <p className="text-sm text-muted-foreground mb-2">{selectedProduct.item_category}</p>
-                <p className="text-foreground mb-6">{selectedProduct.description}</p>
-                <p className="text-3xl font-bold text-gold text-glow-gold mb-6">{selectedProduct.price} GP</p>
-                <div className="flex gap-4">
-                  <Button variant="outline" onClick={() => setSelectedProduct(null)}>Fechar</Button>
-                  <Button variant="arcane" size="lg" className="flex-1" onClick={() => {
-                    addToCart(selectedProduct);
-                    setSelectedProduct(null);
-                  }}>
-                    Adicionar ao Carrinho
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {showLoginModal && <LoginModal onClose={() => setShowLoginModal(false)} />}
     </div>
   );
 };
