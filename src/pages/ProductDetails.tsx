@@ -168,7 +168,7 @@ const ProductDetails = () => {
             </p>
             
             <div className="flex items-center justify-between p-6 bg-card/30 rounded-lg border border-gold/20 mb-8">
-              <span className="text-3xl font-bold text-gold text-glow-gold">{product.price} GP</span>
+              <span className="text-3xl font-bold text-gold text-glow-gold">{product.price} BRL</span>
               <Button size="lg" variant="arcane" onClick={handleAddToCart} className="px-8">
                 <ShoppingCart className="mr-2 h-5 w-5" />
                 Adicionar ao Carrinho
@@ -202,7 +202,7 @@ const ProductDetails = () => {
                   <h3 className="font-display text-lg mb-2 text-foreground group-hover:text-primary transition-colors">
                     {rec.item_name}
                   </h3>
-                  <p className="text-gold font-bold">{rec.price} GP</p>
+                  <p className="text-gold font-bold">{rec.price} BRL</p>
                 </div>
               </Link>
             ))}

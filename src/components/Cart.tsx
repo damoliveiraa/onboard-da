@@ -22,7 +22,7 @@ export const Cart = ({ items, onRemove, onCheckout, onClose }: CartProps) => {
     window.dataLayer.push({
       event: 'view_cart',
       ecommerce: {
-        currency: 'GP',
+        currency: 'BRL',
         value: total,
         items: items.map(item => ({
           item_id: item.item_id,
@@ -64,7 +64,7 @@ export const Cart = ({ items, onRemove, onCheckout, onClose }: CartProps) => {
                   <div className="flex-1">
                     <h3 className="font-semibold text-foreground">{item.item_name}</h3>
                     <p className="text-sm text-muted-foreground">Quantidade: {item.quantity || 1}</p>
-                    <p className="text-gold font-semibold">{item.price * (item.quantity || 1)} GP</p>
+                    <p className="text-gold font-semibold">{item.price * (item.quantity || 1)} BRL</p>
                   </div>
                   <Button variant="destructive" size="sm" onClick={() => onRemove(item.item_id)}>
                     Remover
@@ -76,7 +76,7 @@ export const Cart = ({ items, onRemove, onCheckout, onClose }: CartProps) => {
             <div className="border-t border-border pt-4">
               <div className="flex justify-between items-center mb-4">
                 <span className="text-xl font-display">Total:</span>
-                <span className="text-2xl font-bold text-gold text-glow-gold">{total} GP</span>
+                <span className="text-2xl font-bold text-gold text-glow-gold">{total} BRL</span>
               </div>
               <Button variant="arcane" size="lg" className="w-full" onClick={handleCheckout}>
                 Prosseguir para o Checkout

@@ -64,7 +64,7 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
         <h3 className="font-display text-lg mb-2 text-foreground">{product.item_name}</h3>
         <p className="text-sm text-muted-foreground mb-3">{product.item_category}</p>
         <div className="flex justify-between items-center">
-          <span className="text-xl font-bold text-gold text-glow-gold">{product.price} GP</span>
+          <span className="text-xl font-bold text-gold text-glow-gold">{product.price} BRL</span>
           <Button variant="arcane" size="sm" onClick={handleAddToCart}>
             Adicionar
           </Button>

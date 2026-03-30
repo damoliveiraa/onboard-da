@@ -69,7 +69,7 @@ const Checkout = () => {
       window.dataLayer.push({
         event: 'begin_checkout',
         ecommerce: {
-          currency: 'GP',
+          currency: 'BRL',
           value: total,
           items: cart.map(item => ({
             item_id: item.item_id,
@@ -152,7 +152,7 @@ const Checkout = () => {
     window.dataLayer.push({
       event: 'add_address_info',
       ecommerce: {
-        currency: 'GP',
+        currency: 'BRL',
         value: total,
         items: cart.map(item => ({
           item_id: item.item_id,
@@ -183,7 +183,7 @@ const Checkout = () => {
     window.dataLayer.push({
       event: 'add_shipping_info',
       ecommerce: {
-        currency: 'GP',
+        currency: 'BRL',
         value: total,
         items: cart.map(item => ({
           item_id: item.item_id,
@@ -204,7 +204,7 @@ const Checkout = () => {
         value: total,
         tax: 0,
         shipping: 0,
-        currency: 'GP',
+        currency: 'BRL',
         items: cart.map(item => ({
           item_id: item.item_id,
           item_name: item.item_name,
@@ -249,13 +249,13 @@ const Checkout = () => {
               {cart.map(item => (
                 <li key={item.item_id} className="flex justify-between">
                   <span>{item.quantity || 1}x {item.item_name}</span>
-                  <span>{item.price * (item.quantity || 1)} GP</span>
+                  <span>{item.price * (item.quantity || 1)} BRL</span>
                 </li>
               ))}
             </ul>
             <div className="flex justify-between font-bold text-foreground border-t border-border pt-2">
               <span>Total:</span>
-              <span className="text-gold">{total} GP</span>
+              <span className="text-gold">{total} BRL</span>
             </div>
           </div>
 

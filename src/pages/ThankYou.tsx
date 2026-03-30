@@ -23,13 +23,13 @@ const ThankYou = () => {
               {cart.map((item: any) => (
                 <li key={item.item_id} className="flex justify-between text-sm">
                   <span>{item.quantity || 1}x {item.item_name}</span>
-                  <span className="text-gold">{item.price * (item.quantity || 1)} GP</span>
+                  <span className="text-gold">{item.price * (item.quantity || 1)} BRL</span>
                 </li>
               ))}
             </ul>
             <div className="flex justify-between font-bold text-lg border-t border-border pt-4">
               <span>Total:</span>
-              <span className="text-gold text-glow-gold">{total} GP</span>
+              <span className="text-gold text-glow-gold">{total} BRL</span>
             </div>
           </div>
         )}
