@@ -349,7 +349,7 @@ const Index = () => {
                       
                       // Check if all chests are opened
                       if (Object.keys(newChestItems).length === 4) {
-                        setTreasureTimer(60); // 1 minute
+                        setTreasureTimer(10); // 1 minute
                         toast.info("Todos os baús foram abertos! Aguarde 1 minuto para novos tesouros.");
                       }
                     }}
